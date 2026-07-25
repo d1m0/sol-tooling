@@ -49,9 +49,9 @@ additional information from the compiler makes this task very difficult for
 arbitrary optimized code.
 
 There are [existing](TODO) approaches that attempt to use a combination of
-[symbolic execution](TODO) and [heuristics](TODO) to infer as much of this
-information as possible, but these are incomplete. More specifically they may
-fail for optimized code with broken source maps.
+[symbolic execution](TODO) and [heuristics](TODO) to infer as much of the
+missing debug information as possible, but these are incomplete. More
+specifically they may fail for optimized code with broken source maps.
 
 Our core insight, is that instead of trying to map an EVM execution trace back
 onto the source code, we can just **interpret** the source code, using the same
@@ -63,7 +63,7 @@ state.
 
 ## Pros/Cons
 
-This ideas has several pros/cons summarized below:
+This ideas has several pros/cons:
 
 Pros:
 
@@ -78,12 +78,12 @@ Cons:
 A full language interpreter is essentially an additional implementation of the
 language semantics. While it is a signifficant engineering effort (con), it is
 useful as a second implementation against which we can differentially fuzz a
-compiler. In fact, while replaying mainnet TXs we observed differences in
+compiler(pro). In fact, while replaying mainnet TXs we observed differences in
 beavior between the interpreter and the compiled code that were due to bugs
 later fixed in the compiler!
+
 A source-level interpreter is also a useful template upon which we can build a
 symbolic execution engine for Solidity ASTs.
-
 
 # Motivating Example
 
@@ -93,7 +93,7 @@ To illustrate our work, lets consider the following sample Solidity code:
 contract A {
     B b;
     function foo(uint x) public returns (uint) {
-        return b.foo(x, 1)
+        return b.foo(x, 1) // (1)
     }
 }
 
@@ -104,4 +104,9 @@ contract B {
 }
 {% endhighlight %}
 
-Next consider an execution that calls `A.foo(1)`.
+Next consider an execution trace for the call `A.foo(1)`. The trace can be split
+in 3 segments, as shown in Fig 1. below - 1) any instructions in `A.foo()` prior
+to the call to `b.foo(x, 1)`, 2) any instructions inside `B.foo()` and finally
+3) the remaining instructions in `A.foo()` after that call.
+
+![Trace Segments](trace01.jpeg)
