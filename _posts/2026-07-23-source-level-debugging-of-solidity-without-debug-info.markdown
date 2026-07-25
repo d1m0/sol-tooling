@@ -103,3 +103,5 @@ contract B {
     }
 }
 {% endhighlight %}
+
+Next consider an execution that calls `A.foo(1)`.
