@@ -1,6 +1,6 @@
 ---
 layout: post
-title:  "Debuging Solidity at the Source-Level Without Debug Information"
+title:  "Debuging Solidity Without Debug Information"
 date:   2026-07-23 08:48:33 -1000
 categories: interpreter
 ---
@@ -93,7 +93,7 @@ To illustrate our work, lets consider the following sample Solidity code:
 contract A {
     B b;
     function foo(uint x) public returns (uint) {
-        return b.foo(x, 1) // (1)
+        return b.foo(x + 1, 1) * 2;
     }
 }
 
@@ -110,3 +110,10 @@ to the call to `b.foo(x, 1)`, 2) any instructions inside `B.foo()` and finally
 3) the remaining instructions in `A.foo()` after that call.
 
 ![Trace Segments](/sol-tooling/assets/images/trace01.jpeg)
+
+In the first segment, we would find the code for evaluating `x + 1` for example, and setting up the call to `b.foo()`.
+In the second segment, we would find instructions to evaluate `a + b` inside `B.foo()` and any other compiler generated function call preambles.
+In the third segment we would find instructions multiplying the result of the call by `2` and returning the resulting value.
+
+The boundaries of those external segments are externally observable events. We consider several types of externally observable events:
+
