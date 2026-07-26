@@ -109,4 +109,4 @@ in 3 segments, as shown in Fig 1. below - 1) any instructions in `A.foo()` prior
 to the call to `b.foo(x, 1)`, 2) any instructions inside `B.foo()` and finally
 3) the remaining instructions in `A.foo()` after that call.
 
-![Trace Segments](trace01.jpeg)
+![Trace Segments](sol-tooling/assets/images/trace01.jpeg)
