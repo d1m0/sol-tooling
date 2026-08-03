@@ -211,13 +211,15 @@ EVM trace (see Fig 4).
 Together, all these checks establish that the interpreter produced the same
 observable behavior as the EVM trace.
 
-This procedure established a [simulation relation](TODO) between the execution of the interpreter and EVM execution.
-The simulation relation serves as a witness, that the two have the same observable behavior.
+This procedure establishes a [simulation
+relation](https://en.wikipedia.org/wiki/Simulation_(computer_science)) between
+individual executions of the interpreter and the EVM.  The simulation relation
+serves as a witness, that the two have the same observable behavior for this particular execution.
 
 We will go more in depth in separate posts on both the design of the
 interpreter as well as the exact algorithm for matching up and comparing observable events (we call this process *trace alignment*).
 Crucially, we will explore in our future blog posts how we recover from cases
-where we run into a mismatch at some observable event pair(e.g. due to an Out-of-Gas
+where we run into a mismatch at some observable event pair (e.g. due to an Out-of-Gas
 exception), and still manage to continue interpreting later in the trace. This trick allows us to cover even more of a given execution trace, when faced with low-level exceptions we cannot model, or bugs in the interpreter.
 
 # Evaluation
