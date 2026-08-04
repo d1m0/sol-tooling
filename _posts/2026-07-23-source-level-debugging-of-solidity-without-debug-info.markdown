@@ -9,16 +9,19 @@ categories: interpreter
 
 This post is the first in a series exploring a new approach to source-level
 debugging for Solidity contracts. Debugging is a core part of any language
-ecosystem, but in the case of Solidity contracts it has been lacking. Our work
+ecosystem, but has been lacking in the case of Solidity contracts. Our work
 took an alternative approach to debugging, centered around interpretation. We
-successfully debugged **99.8%** of all in-scope segments[^1] across **~100K** TXs
+successfully debugged **99.8%** of all in-scope segments[^1] across **~100K** transactions (TXs)
 covering **~36K** different real world deployed Solidity contracts.
 
-To achieve this we built a *full*[^12] Solidity Interpreter (i.e. an interpreter for
-Solidity ASTs). Our interpreter handles almost all major Solidity language features
+To achieve this we built a *full*[^12] Solidity Interpreter (i.e. an **interpreter for
+Solidity ASTs**). Our interpreter handles almost all major Solidity language features
 with the exception of inline assembly (left as future work).
 
-This first post will give a brief overview of our work. In the following
+While the interpreter executes Solidity ASTs, it works over low level state
+almost bitwise same as the EVM state[^13].
+
+This first post will give a brief overview of our work. In future 
 posts we will explore the design of the Solidity interpreter we've built, the
 algorithm for verifiable replay of EVM transactions using the interpreter, and
 some interesting engineering challenges we've had to overcome.
@@ -48,9 +51,9 @@ inconsistent and partial debug information.
 
 ## Different perspective on debugging
 
-At a high-level the goal of debugging is to provide an explanation at the
-source code level of what a particular low-level execution did. Lacking the
-additional information from the compiler makes this task very difficult for
+At a high level, the goal of debugging is to provide an explanation at the
+source code level of what a particular low-level execution did. The lack of
+necessary debug information from the Solidity compiler complicates this task for
 arbitrary optimized code.
 
 There are existing[^7][^8][^9][^10][^11] debuggers for Solidity, but they either rely on source maps, and thus can't handle the broken source maps for optimized compilations, or are in a very early experimental phase.
@@ -69,18 +72,19 @@ the observable behavior produced by the interpreter to what the EVM is doing.
 
 As a nice bonus, this design choice enables us to build an interpreter that can
 restart in many places in the middle of a trace, by getting its state from
-whatever the EVM state is at that point. This allows a design that can cover a
-more of an EVM execution trace, in the face of low-level exception and other
-causes of "misalignment" between the interpreter and the EVM. We will delve more in-depth into this recovery mechanism in later posts.
+whatever the EVM state is at that point. This design that can cover more of an
+EVM execution trace, in the face of low-level exception and other causes of
+"misalignment" between the interpreter and the EVM. We will delve further
+into this recovery mechanism in future posts.
 
 ## Pros/Cons
 
-This idea has several pros/cons:
+This approach has several pros/cons:
 
 Pros:
 
-1. This approach doesn't require additional debug information from the compiler. We don't even use source maps.
-2. This approach produces a Solidity Interpreter as an additional artifact. This can be independently used (e.g. for differential fuzzing of compilers)
+1. Doesn't require additional debug information from the compiler. We don't even use source maps.
+2. Produces a Solidity Interpreter as an additional artifact. This can be independently used (e.g. for differential fuzzing of compilers)
 
 Cons:
 
@@ -142,13 +146,17 @@ The boundaries of those external segments are externally observable events. We c
 | Exception | `require(...)`, `assert(...)`, `revert ...`, builtin exceptions, etc |
 | Event Emission | `emit Transfer(...)` |
 
-A core requirement of our approach is the idea that a compiler would not:
+A core requirement of our approach is that a compiler will not:
 
-1. Re-order these events, as that would change the observable behavior of the program[^4]
+1. Re-order observable events
 
-2. Move storage writes across external call/return boundaries as an optimization. (as that may change the behavior of the contract in case of callbacks)
+2. Move storage writes across external call/return boundaries
 
-Assuming that the compiler respects our 2 requirements, then at those boundaries
+We believe both are reasonable, given that (1) would directly change the observable
+behavior of the contract[^4] and (2) may change the behavior of the contract in
+case of callbacks.
+
+Assuming that the compiler respects our two requirements, at those boundaries
 we can check that the interpreter has the same intermediate state (storage), and
 that the interpreter is doing the exact same observable event as the EVM.
 
@@ -162,8 +170,8 @@ Lets see how this would work for our example call above.
 
 ## Debugging the example trace
 
-To begin debugging the call to `A.foo(1)`, we initialize an interpreter with an
-initial state containing an empty memory, storage equivalent to the storage of
+To begin debugging the call to `A.foo(1)`, we initialize an interpreter with a
+state containing an empty memory, storage equivalent to the storage of
 `A` at the start of the EVM trace and the same `msg.data` as the EVM trace's
 `msg.data`.
 
@@ -177,14 +185,14 @@ low-level observable event.
 
 We verify that the encountered low-level observable event is a `CALL` instruction,
 that the target address matches the address of the high-level call (`B`'s
-address), and that two calls shave the same `msg.data` and value.
+address), and that two calls share the same `msg.data` and value.
 
 ![Debugging the First Segment](/sol-tooling/assets/images/first_segment3_pre_crop.gif)
 
 At this point we have established that the interpreter matches the *externally* observable behavior of the EVM trace up to the first call.
-That is, we confirmed that the interpreter reaches the same external call as the EVM trace, and leaves the calling contract in the same state as the EVM trace before the call.
+That is, we have confirmed that the interpreter reaches the same external call as the EVM trace, and leaves the calling contract in the same state as the EVM trace before the call.
 
-At this point, interpretation continues in the context of `B.foo()`. We
+Interpretation continues in the context of `B.foo()`. We
 instantiate a new interpreter instance with the storage of `B` before the call,
 an empty memory, and the message arguments and value from the end of the first
 segment.  Again we run the interpreter in `B.foo()` until it reaches an
@@ -201,7 +209,7 @@ instruction.
 This establishes that the interpreter exactly matches the observable behavior of
 the EVM up to the end of the second segment.
 
-Finally we repeat the same steps for the 3rd segment - continue interpreting in
+Finally we repeat the same steps for the 3rd segment - we continue interpreting in
 the original interpreter instance (i.e. in the context of `A.foo()`), using the
 returned data from `B.foo()`. We run the interpreter until it hits the final
 observable event - the return from `A.foo()`. We scan forward in the EVM
@@ -218,17 +226,21 @@ observable behavior as the EVM trace.
 This procedure establishes a [simulation
 relation](https://en.wikipedia.org/wiki/Simulation_(computer_science)) between
 individual executions of the interpreter and the EVM.  The simulation relation
-serves as a witness, that the two have the same observable behavior for this particular execution.
+serves as a witness, that the two have the same observable behavior for this
+particular execution.
 
-We will go more in depth in separate posts on both the design of the
-interpreter as well as the exact algorithm for matching up and comparing observable events (we call this process *trace alignment*).
-Crucially, we will explore in our future blog posts how we recover from cases
-where we run into a mismatch at some observable event pair (e.g. due to an Out-of-Gas
-exception), and still manage to continue interpreting later in the trace. This trick allows us to cover even more of a given execution trace, when faced with low-level exceptions we cannot model, or bugs in the interpreter.
+We will go more in depth in future posts on the design of the interpreter as
+well as the exact algorithm for matching up and comparing observable events (we
+call this process *trace alignment*).  Crucially, future blog posts will explore
+how we recover from cases where we run into a mismatch at some observable event
+pair (e.g. due to an Out-of-Gas exception), and still manage to continue
+interpreting later in the trace. This allows us to cover even more of a given
+execution trace, when faced with low-level exceptions we cannot model, or bugs
+in the interpreter.
 
 # Evaluation
 
-Our evaluation setup consisted of collecting 737 Ethereum Blocks at regular intervals starting from block 1150000 until block 24150001.
+Our evaluation setup collected 737 Ethereum Blocks at regular intervals starting from block 1150000 until block 24150001.
 Next we extracted 101045 TXs out of those blocks. The extracted transactions interact with roughly 36K different deployed contracts, spanning all versions from 0.4.13 to 0.8.29.
 
 For each of those TXs we:
@@ -239,7 +251,7 @@ For each of those TXs we:
 
 Currently there is one major language feature still not implemented - inline
 assembly. We left inline assembly as future work, due to the sheer amount of
-work it required just to implement the language interpreter up to now. 
+time and effort required to implement the language interpreter as it stands. 
 
 Segments in our evaluation can be split into several categories:
 
@@ -253,20 +265,20 @@ Segments in our evaluation can be split into several categories:
 
 Of the above categories, *No Source* is of no interest to us - there is nothing to do if we don't have source code.
 
-The *Misaligned:Inline Assembly* we consider out-of-scope right now. There is a clear path to implementing inline assembly, so covering these blogs is considered just a matter of engineering effort.
+We consider *Misaligned:Inline Assembly* out-of-scope right now. There is a clear path to implementing inline assembly, so covering these blogs is considered just a matter of engineering effort.
 
-The real interesting question for this approach is, how often do we encounter
-the remaining 2 categories - *Misaligned:Low-level Exception* and
+The most interesting question for this approach is, how often we encounter
+the remaining two categories - *Misaligned:Low-level Exception* and
 *Misaligned:Error*.
 
-The first category is an event that we fundamentally can't do much about. At the solidity level its impossible to model the concepts of *gas* and *EVM stack size* (However we do handle the `gaselft()` function correctly! More on this in later posts ;)).
+The first category is an event that we fundamentally cannot do much about. At the Solidity level it's impossible to model the concepts of *gas* and *EVM stack size* (However we do handle the `gaselft()` function correctly! More on this in future posts ;)).
 The second category measures remaining bugs in the current implementation.
 
 So lets look at some ...
 
 # Results
 
-The 101045 TXs touched code in ~36K contracts, spanning all compiler versions from 0.4.13 to 0.8.29. The execution traces were split in a total of 971747 segments, with the following breakdown by segment type:
+The 101045 TXs touched code in ~36K contracts, spanning all compiler versions from 0.4.13 to 0.8.29. The execution traces were split into a total of 971747 segments, with the following breakdown by segment type:
 
 | Segment Type | Count |
 | --- | --- | 
@@ -278,8 +290,8 @@ The 101045 TXs touched code in ~36K contracts, spanning all compiler versions fr
 | Total | 971747 |
 
 As mentioned earlier, there is nothing to do for segments with no source code.
-Furthermore inline assembly is not yet implemented as a feature, so for now we
-consider those out-of-scope. There is a clear path for handling inline assembly.
+Furthermore, inline assembly is not yet implemented as a feature, so for now we
+consider those to be out-of-scope. There is a clear path for handling inline assembly.
 The design decisions to use the same storage format as the EVM, and to use a
 memory layout for objects that is also the same as the EVM enable a relatively
 easy integration for inline assembly.
@@ -303,8 +315,8 @@ optimized code** without even using source map information.
 # Conclusion
 
 This article provides a brief overview of our work on debugging Solidity
-contract execution using an interpreter.  In the next few posts we dig into more
-detail into the design of the interpreter, the full algorithm for aligning
+contracts using an interpreter. In the next few posts we will dig
+further into the design of the interpreter, the full algorithm for aligning
 observable events between the interpreter and the EVM (i.e. building the
 simulation relation) and finally some of the interesting edge cases we observed
 (including known compiler bugs!). I hope this was enough to keep you curious for
@@ -334,3 +346,10 @@ more! In the meantime, check out the
 [^11]: https://docs.runtimeverification.com/simbolik
 
 [^12]: The only major features missing currently are inline assembly, transient state variables and the `layout at` construct. Additionally, there are a couple of builtins still not implemented. All of these are just a matter of time and engineering effort.
+
+[^13]: Storage, message data, return data and exception data are bitwise
+identical between the interpreter and the EVM. In interpreter memory individual
+objects have bitwise identical layout as they would in the EVM. The only
+difference in memory is the ordering of allocations, and the existence of
+intermediate temporary allocations in both the interpreter and the compiled
+code.
