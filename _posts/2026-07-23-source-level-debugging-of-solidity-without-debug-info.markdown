@@ -14,6 +14,10 @@ took an alternative approach to debugging, centered around interpretation. We
 successfully debugged **99.8%** of all in-scope segments[^1] across **~100K** TXs
 covering **~36K** different real world deployed Solidity contracts.
 
+To achieve this we built a *full*[^12] Solidity Interpreter (i.e. an interpreter for
+Solidity ASTs). Our interpreter handles almost all major Solidity language features
+with the exception of inline assembly (left as future work).
+
 This first post will give a brief overview of our work. In the following
 posts we will explore the design of the Solidity interpreter we've built, the
 algorithm for verifiable replay of EVM transactions using the interpreter, and
@@ -49,16 +53,16 @@ source code level of what a particular low-level execution did. Lacking the
 additional information from the compiler makes this task very difficult for
 arbitrary optimized code.
 
-There are [existing][^7][^8][^9][^10][^11] debuggers for Solidity, but they either rely on source maps, and thus can't handle the broken source maps for optimized compilations, or are in a very early experimental phase.
+There are existing[^7][^8][^9][^10][^11] debuggers for Solidity, but they either rely on source maps, and thus can't handle the broken source maps for optimized compilations, or are in a very early experimental phase.
 
 Our core insight is that instead of trying to map each instruction of an EVM execution trace back
-onto the source code, we can **interpret** the source code
+onto the source code, we can **interpret** the source code itself,
 starting from the same state as the low-level execution trace, and then **verify** that the
 interpreter produces the same observable events and the same final state as the low-level execution.
 From a technical point of view, we build a simulation relation for an individual pair of execution traces.
 
 At the heart of this idea is a full Solidity interpreter that interprets
-Solidity ASTs[^2] but works over low-level EVM state. The design choice of
+Solidity ASTs[^2] but works over low-level EVM state (EVM storage, linear byte memory, etc). The design choice of
 having the interpreter work over state as close as possible to the low-level EVM
 state is crucial to this work. This choice of state allows us to easily compare
 the observable behavior produced by the interpreter to what the EVM is doing.
@@ -328,3 +332,5 @@ more! In the meantime, check out the
 [^10]: https://github.com/foundry-rs/foundry/tree/master/crates/debugger/src
 
 [^11]: https://docs.runtimeverification.com/simbolik
+
+[^12]: The only major features missing currently are inline assembly, transient state variables and the `layout at` construct. Additionally, there are a couple of builtins still not implemented. All of these are just a matter of time and engineering effort.
