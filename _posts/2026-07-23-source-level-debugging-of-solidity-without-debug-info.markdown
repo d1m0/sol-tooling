@@ -3,6 +3,7 @@ layout: post
 title:  "Debugging Solidity Without Debug Information"
 date:   2026-07-23 08:48:33 -1000
 categories: interpreter
+author: Dimitar Bounov
 ---
 
 # Introduction
@@ -334,14 +335,26 @@ this was enough to keep you curious for more! In the meantime, check out the
 
 This work is graciously supported by a grant from the Ethereum Foundation. I
 developed some of the underlying libraries
-([sol-dbg](https://github.com/consensysdiligence/sol-dbg) and
+([sol-dbg](https://github.com/consensysdiligence/sol-dbg) and parts of
 [solc-typed-ast](https://github.com/consensysdiligence/solc-typed-ast)) while
 working with the wonderful folks at [Consensys
 Diligence](https://diligence.security/).
 
-Special shout-outs: to Pavel Zevrev who built most of solc-typed-ast himself, to
-Valentin Wustholz and Joran Honning for all their useful discussions and
-engineering insights, and to all the current and former Dili folks - y'all are awesome!
+Special shout-outs: to [Pavel Zevrev](https://github.com/blitz-1306) who built
+most of [solc-typed-ast](https://github.com/consensysdiligence/solc-typed-ast)
+himself, to Valentin Wustholz and Joran Honning for all their useful discussions
+and engineering insights, and to all the current and former Dili folks - y'all
+are awesome!
+
+# Funding
+
+This project is actively looking for funding! Please [reach out](mailto:sol-tooling@proton.me) if interested!
+Additional funding would allow me to:
+
+ - Implement inline assembly (covering the largest gap of missing traces)
+ - Add support for more recent compilers (0.8.30 onwards)
+ - Re-factor the code base to be deployable directly in the browser, clientside
+ - ...and more :)
 
 # Footnotes
 
