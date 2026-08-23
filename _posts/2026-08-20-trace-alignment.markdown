@@ -78,13 +78,13 @@ type AlignedTrace = AlignedTracePair[]
 ```
 
 Here [`BaseStep`](https://d1m0.github.io/sol-interp/classes/BaseStep.html) is the type of an `Interpreter` trace step. See the [documentation](https://d1m0.github.io/sol-interp/classes/BaseStep.html) for details.
-The final `AlignedTrace` data type, is a list of triples, each tripple containing:
+The final `AlignedTrace` data type, is a list of triples, each triple containing:
 
 - `[number, number]` - a range (start, end) in the EVM trace
 - `BaseStep[]` - a list of interpreter steps corresponding to the low-level steps in the range (may be empty)
 - `AlignmentState` - the type of this aligned segment (Aligned, Misaligned, NoSource)
 
-The ranges in an `AlignedTrace` exactly cover the underlying EVM trace, and will include tripples both for parts of the trace where there is no source code, and where we encountered a misalignment.
+The ranges in an `AlignedTrace` exactly cover the underlying EVM trace, and will include triples both for parts of the trace where there is no source code, and where we encountered a misalignment.
 
 Finally, lets assume that we have the following helper functions:
 
@@ -162,7 +162,7 @@ align(trace: EVMStep[], start: number): (number, CallResult, AlignedTrace) {
 }
 ```
 
-The `align` function is recusrively invoked for every execution context in the
+The `align` function is recursively invoked for every execution context in the
 trace. It iteratively scans the low-level trace forward looking for
 `EVMObservableEvent`s. For each event found, it also runs the interpreter (if
 we have source code and haven't hit a misalignment already) until it hits an
@@ -178,10 +178,10 @@ One nice property of the current alignment algorithm is that any misalignments
 only affect trace segments in the current execution context. Any segments in
 execution contexts at different call depths are not affected.
 
-For example consider a contract `A` with mehod foo calling
+For example consider a contract `A` with method foo calling
 another contract's `B`'s `foo` method, where `B.foo()` runs out of gas.
-In Fig. 1 below, on the bottom axis we have the EVM trace, with signifficant observable events marked.
-Above it, we have a visiual representation of the interpreter's execution of the code.
+In Fig. 1 below, on the bottom axis we have the EVM trace, with significant observable events marked.
+Above it, we have a visual representation of the interpreter's execution of the code.
 
 Notably, while the EVM trace runs out of gas in the body of `B.foo()`,
 the interpreter returns successfully from `B.foo()`. This leads to a misalignment (marked with
@@ -203,7 +203,7 @@ its storage from the EVM trace.
 
 We can similarly cover more of a trace when we encounter call to a new context
 after a misalignment. In Fig 2 we have a call to `B.foo()` from an execution
-context that is alread misaligned.  Since this is a new execution context, it
+context that is already misaligned.  Since this is a new execution context, it
 will have its own interpreter instantiated, with state built from the first EVM
 step of the segment.  This way we will successfully build an aligned trace pair
 for the segment of `B.foo()` - (2), even though the 2 surrounding segments -
@@ -211,9 +211,9 @@ for the segment of `B.foo()` - (2), even though the 2 surrounding segments -
 
 ![Call From Misaligned](/sol-tooling/assets/images/call_from_misaligned.jpg)
 
-Being able to recover from misalignment or missing source info is cruicial for
+Being able to recover from misalignment or missing source info is crucial for
 the performance of the alignment algorithm. In mainnet transactions execution
-oftens starts in, or passes through upgradeable proxy contracts for example.
+often starts in, or passes through upgradeable proxy contracts for example.
 Most of those utilize inline assembly - thus resulting in barriers to
 interpretation (currently). Furthermore, contracts without source are also
 plentiful. Thus, interruptions in interpretation are actually the norm in the
@@ -221,7 +221,7 @@ real world, even ignoring misalignments due to Out-of-Gas or bugs.
 
 The ability to recover allowed the trace alignment to cover **99.8%** of trace
 segments, for which we have source code, and which are not precluded by an
-earlier inline asembly block. The remaining **0.2%** were misalignments due to
+earlier inline assembly block. The remaining **0.2%** were misalignments due to
 either Out-of-Gas exceptions, compiler bugs, or bugs in the interpreter.
 
 # Implementation
@@ -269,7 +269,7 @@ library Burn {
 }
 ```
 
-Alignment correctly handled this function, matcing the exact amount of calls ot
+Alignment correctly handled this function, matching the exact amount of calls ot
 `gasleft()` with the correct `GASLEFT` instructions in the segment.
 
 An astute reader may note here that the compiler inserts implicit `GASLEFT`
@@ -278,7 +278,7 @@ algorithm is bounded in a single segment, that may have only one external
 call at the end, all this means is that during matching there may be at most 1 extra `GASLEFT`
 opcode at the end of the segment, which doesn't impact it.
 
-Should the compiler ever insert additional implicit `GASLEFT`, or optimze some
+Should the compiler ever insert additional implicit `GASLEFT`, or optimize some
 away for some reason, this would result in a misalignment, which as was shown
 we can easily recovers from.  During the last evaluation run, with over 100k
 transactions replayed, I have not run into misalignments due to mismatched
