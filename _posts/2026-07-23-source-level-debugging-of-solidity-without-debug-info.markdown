@@ -353,7 +353,7 @@ Additional funding would allow me to:
 
  - Implement inline assembly (covering the largest gap of missing traces)
  - Add support for more recent compilers (0.8.30 onwards)
- - Re-factor the code base to be deployable directly in the browser, clientside
+ - Re-factor the code base to be deployable directly in the browser, client-side
  - ...and more :)
 
 # Footnotes
@@ -380,11 +380,6 @@ Additional funding would allow me to:
 
 [^12]: The only major features missing currently are inline assembly, transient state variables and the `layout at` construct. Additionally, there are a couple of builtins still not implemented. All of these are just a matter of time and engineering effort.
 
-[^13]: Storage, message data, return data and exception data are bitwise
-identical between the interpreter and the EVM. In interpreter memory individual
-objects have bitwise identical layout as they would in the EVM. The only
-difference in memory is the ordering of allocations, and the existence of
-intermediate temporary allocations in both the interpreter and the compiled
-code.
+[^13]: Storage, message data, return data and exception data are bitwise identical between the interpreter and the EVM. In interpreter memory individual objects have bitwise identical layout as they would in the EVM. The only difference in memory is the ordering of allocations, and the existence of intermediate temporary allocations in both the interpreter and the compiled code.
 
 [^14]: Note that I don't compare storages at (and only at) event emission and `GASLEFT`. Instead only the emitted events are checked to be identical. This is to allow for the compiler reordering storage writes across event emission, as that doesn't change the program behavior.
