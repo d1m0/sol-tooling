@@ -14,6 +14,6 @@ Funding would allow me to:
 
 2. Build an inline assembly interpreter, thus closing the last major gap in coverage
 
-3. Re-factoring the code for easier embedding in client-side browser applications
+3. Refactor the code for easier embedding in client-side browser applications
 
-4. Fixing some bugs :)
+4. Explore other extensions (symbolic interpretation?)
