@@ -25,7 +25,7 @@ from the expected behavior. Without further ado..
 
 # Bug 1: Polluting strings in storage
 
-This first bug was hit in one of my own tests. The [test in question](https://github.com/d1m0/sol-interp/blob/main/test/samples/sol2maruir/fun_order.0.5.0.config.sol) checks the order of evaluation between arguments and callee for external calls.
+This first bug was [hit](https://github.com/d1m0/sol-interp/issues/101) in one of my own tests. The [test in question](https://github.com/d1m0/sol-interp/blob/main/test/samples/sol2maruir/fun_order.0.5.0.config.sol) checks the order of evaluation between arguments and callee for external calls.
 The relevant part here however is how it actually records that order. As shown in the listing below, the code concatenates log messages to a string state variable.
 
 ```
